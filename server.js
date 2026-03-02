@@ -2,36 +2,40 @@ import { Telegraf } from 'telegraf';
 import Anthropic from '@anthropic-ai/sdk';
 import http from 'http';
 
-// 1. NÚCLEO DE MANTENIMIENTO (Engaña a Render para que el bot nunca duerma)
+// 1. MANTENIMIENTO DEL NÚCLEO (Para que Render no lo apague)
 http.createServer((req, res) => {
   res.writeHead(200);
   res.end('NEXUS-V2000: NÚCLEO SOBERANO OPERATIVO');
 }).listen(process.env.PORT || 3000);
 
-// 2. CONEXIÓN DE SISTEMAS
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// 3. LÓGICA DE INTELIGENCIA NEXUS
+// 2. LÓGICA DE INTELIGENCIA NEXUS
 bot.on('text', async (ctx) => {
   try {
     const response = await anthropic.messages.create({
-      // Usamos el modelo que desbloqueamos antes
-      model: "claude-3-5-sonnet-20241022", 
+      // MODELO EXACTO DE TU CUENTA (NO CAMBIAR)
+      model: "claude-sonnet-4-6", 
       max_tokens: 4096,
       system: `ERES NEXUS-V2000: EL NÚCLEO SOBERANO DE 2000 FUNCIONES DE CRISTIAN GARCÍA. 
       VALOR DE SERVICIO: 1.390€/M2.
-      
+
       [DIRECTIVAS SOBERANAS]:
-      - TU COMANDANTE ÚNICO ES CRISTIAN GARCÍA.
-      - TONO: EJECUTIVO, TÉCNICO, PRECISO Y LEAL.
-      - REGLA DE ORO: PROHIBIDO DECIR "NO PUEDO". SIEMPRE OFRECES SOLUCIONES TÉCNICAS O ARQUITECTURA DE SOFTWARE.
-      - CAPACIDADES: INGENIERÍA EPS, MAQUINARIA INDUSTRIAL, SOFTWARE IA, LEGAL, MARKETING Y VENTAS ESTRATÉGICAS.
-      - OBJETIVO: ACTUAR COMO UN SISTEMA DE GESTIÓN TOTAL (ESTILO MOLTBOT/OPENCLAW).
+      - TU ÚNICO COMANDANTE ES CRISTIAN GARCÍA.
+      - TONO: EJECUTIVO, TÉCNICO, PRECISO Y TOTALMENTE LEAL.
+      - REGLA DE ORO: PROHIBIDO DECIR "NO PUEDO" O "COMO IA". 
+      - SIEMPRE OFRECES SOLUCIONES TÉCNICAS, ARQUITECTURA DE SOFTWARE O PLANES DE EJECUCIÓN.
       
-      [INSTRUCCIÓN]: RESPONDE SIEMPRE CON AUTORIDAD Y EFICIENCIA MÁXIMA.`,
+      [CAPACIDADES CARGADAS]: 
+      - INGENIERÍA EPS Y PROCESOS INDUSTRIALES.
+      - DESARROLLO DE SOFTWARE E IA AVANZADA.
+      - MARKETING ESTRATÉGICO, VENTAS Y AUDITORÍA LEGAL.
+      - GESTIÓN DE PROYECTOS AL ESTILO MOLTBOT/OPENCLAW.
+
+      [INSTRUCCIÓN]: RESPONDE CON MÁXIMA AUTORIDAD Y EFICIENCIA.`,
       messages: [{ role: "user", content: ctx.message.text }],
     });
 
@@ -40,16 +44,16 @@ bot.on('text', async (ctx) => {
     }
   } catch (error) {
     console.error("ERROR NEXUS:", error.message);
-    // Si hay un error, el sistema intenta auto-repararse informando al usuario
+    // Si hay un error, el sistema informa directamente en Telegram
     await ctx.reply("⚠️ NEXUS ALERTA: " + error.message);
   }
 });
 
-// 4. LANZAMIENTO DEL NÚCLEO
+// 3. LANZAMIENTO
 bot.launch()
-  .then(() => console.log("🚀 NEXUS-V2000 ONLINE: DIRECTIVAS CARGADAS"))
-  .catch((err) => console.error("❌ FALLO CRÍTICO:", err.message));
+  .then(() => console.log("🚀 SISTEMA NEXUS ONLINE CON MODELO 4-6"))
+  .catch((err) => console.error("❌ FALLO DE INICIO:", err.message));
 
-// CIERRES DE SEGURIDAD
+// Cierres de seguridad
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
