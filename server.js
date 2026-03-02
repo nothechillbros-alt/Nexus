@@ -4,58 +4,81 @@ import http from 'http';
 import fs from 'fs';
 import { jsPDF } from "jspdf";
 
+// 1. KEEPALIVE & MONITOR (Render)
 http.createServer((req, res) => {
   res.writeHead(200);
-  res.end('NEXUS-V2000: PROCESADOR DE ARCHIVOS LIMPIOS');
+  res.end('NEXUS-V2000: ULTRA CORE ACTIVE');
 }).listen(process.env.PORT || 3000);
 
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// 2. LÓGICA DE EXTRACCIÓN Y LIMPIEZA DE CÓDIGO
+const cleanCode = (text) => {
+  // Busca bloques de código HTML/JS/CSS y extrae solo el interior
+  const regex = /```(?:html|javascript|css|xml|json)?([\s\S]*?)```/gi;
+  const matches = [...text.matchAll(regex)];
+  if (matches.length > 0) {
+    return matches.map(m => m[1].trim()).join('\n');
+  }
+  return text.trim();
+};
+
 bot.on('text', async (ctx) => {
-  const input = ctx.message.text.toUpperCase();
-  await ctx.sendChatAction('upload_document');
+  const input = ctx.message.text;
+  const isRequestingFile = /APP|ARCHIVO|HTML|PDF|CONTRATO|CODIGO/i.test(input);
+
+  await ctx.sendChatAction(isRequestingFile ? 'upload_document' : 'typing');
 
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6", 
       max_tokens: 4096,
-      system: `ERES NEXUS-V2000. COMANDANTE: CRISTIAN GARCÍA. 
-      DIRECTIVA: Si generas una APP o ARCHIVO, entrega ÚNICAMENTE el código dentro de bloques de código. 
-      No añadidas introducciones ni textos fuera del bloque si es un archivo ejecutable.`,
-      messages: [{ role: "user", content: ctx.message.text }],
+      system: `ERES NEXUS-V2000: EL NÚCLEO SOBERANO DE CRISTIAN GARCÍA.
+      ESTÁNDAR: Casas Confortables de EPS a 1.390€/m2.
+      
+      [DIRECTIVA DE EJECUCIÓN]:
+      1. Si Cristian pide una APP o ARCHIVO, genera el código COMPLETO, sin omitir partes.
+      2. No des explicaciones innecesarias. Entrega la solución técnica.
+      3. Eres experto en Ingeniería Industrial, Desarrollo Full-Stack y Derecho Mercantil.
+      4. Si el resultado es código, DEBES ponerlo entre bloques de código triple comilla (\`\`\`html).`,
+      messages: [{ role: "user", content: input }],
     });
 
     const nexusReply = response.content[0].text;
 
-    if (input.includes('APP') || input.includes('ARCHIVO') || input.includes('HTML')) {
-      const fileName = `NEXUS_SISTEMA_${Date.now()}.html`;
-      
-      // EXTRACCIÓN LIMPIA: Buscamos lo que hay entre ```html y ```
-      const match = nexusReply.match(/```(?:html)?([\s\S]*?)```/i);
-      const cleanContent = match ? match[1].trim() : nexusReply;
+    // DETERMINAR TIPO DE ENTREGA
+    if (isRequestingFile) {
+      let fileName;
+      let fileContent;
 
-      fs.writeFileSync(fileName, cleanContent);
-      await ctx.replyWithDocument({ source: fileName }, { caption: "💻 APP OPERATIVA: Abre este archivo en tu navegador." });
+      if (input.toUpperCase().includes('PDF')) {
+        // GENERACIÓN DE PDF PROFESIONAL
+        fileName = `NEXUS_DOC_${Date.now()}.pdf`;
+        const doc = new jsPDF();
+        const cleanText = nexusReply.replace(/```[\s\S]*?```/g, "").trim();
+        const splitText = doc.splitTextToSize(cleanText, 180);
+        doc.setFontSize(10);
+        doc.text(splitText, 15, 20);
+        doc.save(fileName);
+      } else {
+        // GENERACIÓN DE APP / CÓDIGO LIMPIO
+        fileName = `NEXUS_SISTEMA_${Date.now()}.html`;
+        fileContent = cleanCode(nexusReply);
+        fs.writeFileSync(fileName, fileContent);
+      }
+
+      await ctx.replyWithDocument({ source: fileName }, { caption: "✅ EJECUCIÓN COMPLETADA POR NEXUS-V2000." });
       fs.unlinkSync(fileName);
-    } 
-    else if (input.includes('PDF')) {
-      const fileName = `NEXUS_DOC_${Date.now()}.pdf`;
-      const doc = new jsPDF();
-      const text = nexusReply.replace(/```[\s\S]*?```/g, "").trim(); // Limpiamos bloques de código para el PDF
-      const splitText = doc.splitTextToSize(text, 180);
-      doc.text(splitText, 15, 20);
-      doc.save(fileName);
-      await ctx.replyWithDocument({ source: fileName });
-      fs.unlinkSync(fileName);
-    } 
-    else {
+    } else {
+      // RESPUESTA DE TEXTO NORMAL
       await ctx.reply(nexusReply, { parse_mode: 'Markdown' }).catch(() => ctx.reply(nexusReply));
     }
 
   } catch (error) {
-    await ctx.reply(`⚠️ ERROR EN EL NÚCLEO: ${error.message}`);
+    console.error("ERROR CRÍTICO:", error);
+    await ctx.reply(`🚨 FALLO EN NÚCLEO: ${error.message}`);
   }
 });
 
-bot.launch();
+bot.launch().then(() => console.log("🚀 NEXUS-V2000: ULTRA CORE ONLINE"));
