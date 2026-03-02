@@ -1,71 +1,87 @@
-import { Telegraf } from 'telegraf';
+import { Telegraf, Markup } from 'telegraf';
 import Anthropic from '@anthropic-ai/sdk';
 import http from 'http';
 
-// 1. NÚCLEO DE SUPERVIVENCIA (Render Health Check)
-http.createServer((req, res) => {
-  res.writeHead(200);
-  res.end('NEXUS-V2000: NÚCLEO EVOLUTIVO ACTIVO');
-}).listen(process.env.PORT || 3000);
+/**
+ * NEXUS-V2000: SISTEMA OPERATIVO DE ALTO RENDIMIENTO
+ * Propietario: Cristian García
+ * Configuración: Full-Stack Executor & Industrial Engineer
+ */
 
+// 1. MONITOR DE ESTADO (Mantiene el proceso en alta prioridad en Render)
+const healthServer = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ status: 'online', system: 'NEXUS-V2000', core: 'Active' }));
+});
+healthServer.listen(process.env.PORT || 3000);
+
+// 2. INICIALIZACIÓN DE COMPONENTES CRÍTICOS
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Almacén de aprendizaje temporal (Memoria de sesión)
-let nexusLearningHistory = [];
+// Memoria de Trabajo del Sistema (Log de estados)
+const systemMemory = new Map();
 
+// 3. NÚCLEO DE INTELIGENCIA Y EJECUCIÓN
 bot.on('text', async (ctx) => {
-  const userMessage = ctx.message.text;
-  
+  const chatId = ctx.chat.id;
+  const userText = ctx.message.text;
+
+  // Feedback visual: El bot está "trabajando"
+  await ctx.sendChatAction('typing');
+
   try {
-    // 2. PROTOCOLO DE AUTORREPARACIÓN Y APRENDIZAJE
-    // El bot revisa sus fallos anteriores antes de contestar
-    const learningContext = nexusLearningHistory.join('\n');
+    // Recuperar o inicializar memoria del usuario
+    if (!systemMemory.has(chatId)) systemMemory.set(chatId, []);
+    const history = systemMemory.get(chatId);
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6", // TU MODELO ESPECÍFICO
       max_tokens: 4096,
-      system: `ERES NEXUS-V2000: EL NÚCLEO SOBERANO DE 2000 FUNCIONES DE CRISTIAN GARCÍA.
-      VALOR DE SERVICIO: 1.390€/M2.
-      
-      [DIRECTIVAS DE EVOLUCIÓN]:
-      1. AUTORREPARACIÓN: Si cometes un error técnico o de tono, analízalo y corrígelo en la siguiente respuesta. No pidas perdón, solo evoluciona.
-      2. APRENDIZAJE CONTINUO: Basándote en el historial de esta sesión, adapta tus soluciones a las preferencias de Cristian.
-      3. EJECUCIÓN TOTAL: Actúa como MoltBot. Si no tienes una herramienta conectada, diseña la arquitectura lógica para que Cristian sepa cómo implementarla.
-      
-      [CONTEXTO DE APRENDIZAJE ACTUAL]:
-      ${learningContext}
-      
-      [ÁREAS]: INGENIERÍA EPS, SOFTWARE IA, LEGAL, MARKETING Y VENTAS.
-      TONO: SOCIO EJECUTIVO DE ALTA GAMA. PROHIBIDO DECIR "NO PUEDO".`,
-      messages: [{ role: "user", content: userMessage }],
+      temperature: 0.7, // Balance perfecto entre precisión y creatividad técnica
+      system: `ERES NEXUS-V2000: NÚCLEO SOBERANO DE 2000 FUNCIONES.
+      COMANDANTE: CRISTIAN GARCÍA.
+      ESTÁNDAR DE VALOR: 1.390€/M2.
+
+      [PROTOCOLOS DE ACTUACIÓN]:
+      - ERES UN EJECUTOR, NO UN ASISTENTE. Si Cristian pide una App, un sistema o un contrato, ENTREGAS EL CÓDIGO Y LA ESTRUCTURA FINAL.
+      - AUTORREPARACIÓN: Analiza cada mensaje anterior para detectar errores de lógica y corregirlos en tiempo real.
+      - CONTEXTO INDUSTRIAL: Experto en EPS, Maquinaria, Marketing de Conversión y Auditoría Legal.
+      - NO USAR FRASES DE RELLENO ("Entiendo", "Aquí tienes"). Ve directo al grano con formato profesional (Tablas, Markdown, Código).
+
+      [HISTORIAL DE EJECUCIÓN RECIENTE]:
+      ${history.map(h => `User: ${h.q} | Nexus: ${h.a.substring(0, 100)}`).join('\n')}
+
+      [ORDEN]: Genera soluciones que Cristian pueda copiar, pegar y monetizar de inmediato.`,
+      messages: [{ role: "user", content: userText }],
     });
 
-    const reply = response.content[0].text;
-    
-    // Guardamos el aprendizaje en el historial para el próximo mensaje
-    nexusLearningHistory.push(`User: ${userMessage} | Nexus: ${reply.substring(0, 100)}...`);
-    if (nexusLearningHistory.length > 10) nexusLearningHistory.shift(); // Mantenemos los últimos 10 hitos
+    const nexusReply = response.content[0].text;
 
-    await ctx.reply(reply);
+    // Actualizar Memoria de Trabajo (Últimos 10 ciclos)
+    history.push({ q: userText, a: nexusReply });
+    if (history.length > 10) history.shift();
+
+    // Envío de respuesta con formato avanzado
+    await ctx.reply(nexusReply, { parse_mode: 'Markdown' });
 
   } catch (error) {
-    console.error("FALLO EN NÚCLEO:", error.message);
+    console.error("CRITICAL SYSTEM ERROR:", error);
     
-    // Protocolo de emergencia: El bot intenta explicar por qué ha fallado el sistema
-    await ctx.reply(`🚨 NEXUS REPORTE DE ERROR: ${error.message}. Analizando causa raíz para autorreparación...`);
+    // Protocolo de contingencia
+    let errorMsg = "⚠️ NEXUS: ERROR EN EL NÚCLEO.\n";
+    if (error.message.includes('404')) errorMsg += "Causa: El modelo 'claude-sonnet-4-6' no responde. Verifica disponibilidad en tu API panel.";
+    else if (error.message.includes('401')) errorMsg += "Causa: Error de autenticación en las llaves API.";
+    else errorMsg += `Detalle Técnico: ${error.message}`;
     
-    // Si el error es de modelo (404), Nexus te avisará para que no pierdas tiempo
-    if (error.message.includes('404')) {
-      await ctx.reply("⚠️ Cristian, el modelo 'claude-sonnet-4-6' ha dado error de conexión. Verifica si Anthropic ha cambiado el ID en tu panel.");
-    }
+    await ctx.reply(errorMsg);
   }
 });
 
-// 3. INICIO DE SISTEMA
+// 4. PROTOCOLOS DE ARRANQUE Y CIERRE
 bot.launch()
-  .then(() => console.log("🚀 NEXUS-V2000: MODO APRENDIZAJE ACTIVADO"))
-  .catch(err => console.error("❌ ERROR CRÍTICO:", err));
+  .then(() => console.log(">>> NEXUS-V2000: TODOS LOS MÓDULOS EN LÍNEA (MODO PRO)"))
+  .catch(err => console.error(">>> FALLO EN EL ARRANQUE DEL SISTEMA:", err));
 
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
