@@ -2,7 +2,7 @@ import { Telegraf } from 'telegraf';
 import Anthropic from '@anthropic-ai/sdk';
 import http from 'http';
 
-// 1. SERVIDOR HTTP PARA RENDER
+// 1. MANTENER VIVO EL SERVICIO EN RENDER
 http.createServer((req, res) => {
   res.writeHead(200);
   res.end('NEXUS-V2000 OPERATIVO');
@@ -16,8 +16,8 @@ const anthropic = new Anthropic({
 bot.on('text', async (ctx) => {
   try {
     const response = await anthropic.messages.create({
-      // CAMBIO CLAVE: Usamos el nombre que sale en tu captura de pantalla
-      model: "claude-3-5-sonnet-latest", 
+      // ESTE ES EL MODELO QUE SALE EN TU FOTO
+      model: "claude-sonnet-4-6", 
       max_tokens: 4096,
       system: `ERES NEXUS-V2000: EL NÚCLEO SOBERANO DE 2000 FUNCIONES DE CRISTIAN GARCÍA. PRECIO: 1.390€/m2.
       REGLAS: PROHIBIDO DECIR "NO PUEDO". EJECUTA DE INMEDIATO SIN PEDIR NÚMEROS. TONO EJECUTIVO Y TÉCNICO.`,
@@ -29,8 +29,13 @@ bot.on('text', async (ctx) => {
     }
   } catch (error) {
     console.error("ERROR:", error.message);
+    // Si sigue saliendo 404, el bot te lo dirá en Telegram
     await ctx.reply("Nexus Error: " + error.message);
   }
 });
 
-bot.launch().then(() => console.log("🚀 SISTEMA NEXUS ONLINE"));
+bot.launch().then(() => console.log("🚀 SISTEMA NEXUS ONLINE CON MODELO 4-6"));
+
+// Cierres de seguridad
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
