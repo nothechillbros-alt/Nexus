@@ -1,6 +1,6 @@
 {
-  "name": "nexus-v2000-ultra",
-  "version": "3.0.0",
+  "name": "nexus-v2000-sovereign",
+  "version": "4.0.0",
   "type": "module",
   "main": "server.js",
   "dependencies": {
