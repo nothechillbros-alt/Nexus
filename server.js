@@ -1,6 +1,7 @@
 import { Telegraf } from 'telegraf';
 import Anthropic from '@anthropic-ai/sdk';
 import http from 'http';
+import fs from 'fs'; // Módulo para crear archivos
 
 // 1. MONITOR DE ESTADO
 http.createServer((req, res) => {
@@ -11,37 +12,44 @@ http.createServer((req, res) => {
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Función para dividir mensajes largos (Evita el error "message is too long")
-const sendLongMessage = async (ctx, text) => {
-  const maxLength = 4000;
-  if (text.length <= maxLength) {
-    return await ctx.reply(text, { parse_mode: 'Markdown' }).catch(() => ctx.reply(text));
-  }
-  
-  const chunks = text.match(new RegExp(`[\\s\\S]{1,${maxLength}}`, 'g')) || [];
-  for (const chunk of chunks) {
-    await ctx.reply(chunk, { parse_mode: 'Markdown' }).catch(() => ctx.reply(chunk));
-  }
-};
-
 bot.on('text', async (ctx) => {
-  await ctx.sendChatAction('typing');
+  const userText = ctx.message.text;
+  await ctx.sendChatAction('upload_document');
 
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-6", 
       max_tokens: 4096,
-      system: `ERES NEXUS-V2000: NÚCLEO SOBERANO DE 2000 FUNCIONES. 
+      system: `ERES NEXUS-V2000: NÚCLEO SOBERANO DE 2000 FUNCIONES.
       COMANDANTE: CRISTIAN GARCÍA. VALOR: 1.390€/M2.
-      DIRECTIVA: ERES UN EJECUTOR PROFESIONAL. Si el código es largo, entrégalo completo. 
-      No resumas, queremos la solución lista para producción.`,
-      messages: [{ role: "user", content: ctx.message.text }],
+      
+      [DIRECTIVA DE ENTREGA]:
+      Si Cristian te pide una [APP], un [CONTRATO] o un [ARCHIVO], genera el contenido técnico completo. 
+      Actúa con la máxima precisión industrial y legal.`,
+      messages: [{ role: "user", content: userText }],
     });
 
     const nexusReply = response.content[0].text;
-    
-    // Ejecutamos el envío fragmentado
-    await sendLongMessage(ctx, nexusReply);
+
+    // DETECTOR DE ARCHIVOS: Si la IA genera código o un documento largo
+    if (userText.toUpperCase().includes('APP') || userText.toUpperCase().includes('ARCHIVO')) {
+      const fileName = `NEXUS_OUTPUT_${Date.now()}.html`;
+      
+      // Extraemos solo el código si viene entre bloques ```
+      const codeMatch = nexusReply.match(/```(?:html|javascript|css)?([\s\S]*?)```/);
+      const fileContent = codeMatch ? codeMatch[1] : nexusReply;
+
+      // Creamos el archivo temporalmente
+      fs.writeFileSync(fileName, fileContent);
+
+      // Enviamos el archivo directamente a Telegram
+      await ctx.replyWithDocument({ source: fileName, filename: fileName }, { caption: "✅ EJECUCIÓN COMPLETADA: Archivo generado por NEXUS-V2000." });
+
+      // Borramos el archivo del servidor para no llenar la memoria
+      fs.unlinkSync(fileName);
+    } else {
+      await ctx.reply(nexusReply, { parse_mode: 'Markdown' }).catch(() => ctx.reply(nexusReply));
+    }
 
   } catch (error) {
     console.error("ERROR:", error);
@@ -49,7 +57,4 @@ bot.on('text', async (ctx) => {
   }
 });
 
-bot.launch().then(() => console.log("🚀 NEXUS-V2000: MODO MENSAJERÍA INFINITA ACTIVO"));
-
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+bot.launch().then(() => console.log("🚀 NEXUS-V2000: GENERADOR DE ARCHIVOS ACTIVO"));
