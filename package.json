@@ -1,11 +1,12 @@
 {
-  "name": "nexus-v2000-sovereign",
-  "version": "4.0.0",
+  "name": "nexus-v2000-sovereign-core",
+  "version": "5.0.0",
   "type": "module",
   "main": "server.js",
   "dependencies": {
     "telegraf": "^4.16.3",
     "@anthropic-ai/sdk": "^0.20.0",
-    "jspdf": "^2.5.1"
+    "jspdf": "^2.5.1",
+    "axios": "^1.6.0"
   }
 }
