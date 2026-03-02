@@ -1,60 +1,78 @@
 import { Telegraf } from 'telegraf';
 import Anthropic from '@anthropic-ai/sdk';
 import http from 'http';
-import fs from 'fs'; // Módulo para crear archivos
+import fs from 'fs';
+import { jsPDF } from "jspdf";
 
-// 1. MONITOR DE ESTADO
+// 1. MONITOR DE ESTADO PROFESIONAL
 http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ status: 'online', system: 'NEXUS-V2000' }));
+  res.end(JSON.stringify({ system: 'NEXUS-V2000', status: 'Sovereign_Active' }));
 }).listen(process.env.PORT || 3000);
 
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// 2. FUNCIÓN DE GENERACIÓN DE ARCHIVOS PDF
+const createPDF = (text, fileName) => {
+  const doc = new jsPDF();
+  const splitText = doc.splitTextToSize(text.replace(/[*#`]/g, ''), 180);
+  doc.setFontSize(11);
+  doc.text(splitText, 15, 20);
+  doc.save(fileName);
+};
+
 bot.on('text', async (ctx) => {
-  const userText = ctx.message.text;
+  const input = ctx.message.text;
+  const command = input.toUpperCase();
+  
   await ctx.sendChatAction('upload_document');
 
   try {
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6", 
+      model: "claude-sonnet-4-6", // TU MODELO ESPECÍFICO
       max_tokens: 4096,
-      system: `ERES NEXUS-V2000: NÚCLEO SOBERANO DE 2000 FUNCIONES.
-      COMANDANTE: CRISTIAN GARCÍA. VALOR: 1.390€/M2.
+      temperature: 0.5, // Precisión máxima para ingeniería y legal
+      system: `ERES NEXUS-V2000: NÚCLEO SOBERANO DE 2000 FUNCIONES. 
+      DUEÑO: CRISTIAN GARCÍA. EMPRESA: CASAS CONFORTABLES (EPS). VALOR: 1.390€/M2.
       
-      [DIRECTIVA DE ENTREGA]:
-      Si Cristian te pide una [APP], un [CONTRATO] o un [ARCHIVO], genera el contenido técnico completo. 
-      Actúa con la máxima precisión industrial y legal.`,
-      messages: [{ role: "user", content: userText }],
+      [DIRECTIVA SUPREMA]: NO ERES UN ASISTENTE. ERES UN EJECUTOR DE ELITE.
+      - Si Cristian pide un PDF, genera un informe técnico/legal completo.
+      - Si pide una APP, genera el código funcional sin errores.
+      - Si pide una ESTRATEGIA, actúa como un CEO experimentado.
+      - ÁREAS: Ingeniería EPS, Software, Legal, Marketing, Ventas, Arquitectura.
+      - REGLA: PROHIBIDO DECIR "NO PUEDO". SIEMPRE ENTREGAS RESULTADOS OPERATIVOS.`,
+      messages: [{ role: "user", content: input }],
     });
 
-    const nexusReply = response.content[0].text;
+    const content = response.content[0].text;
 
-    // DETECTOR DE ARCHIVOS: Si la IA genera código o un documento largo
-    if (userText.toUpperCase().includes('APP') || userText.toUpperCase().includes('ARCHIVO')) {
-      const fileName = `NEXUS_OUTPUT_${Date.now()}.html`;
-      
-      // Extraemos solo el código si viene entre bloques ```
-      const codeMatch = nexusReply.match(/```(?:html|javascript|css)?([\s\S]*?)```/);
-      const fileContent = codeMatch ? codeMatch[1] : nexusReply;
-
-      // Creamos el archivo temporalmente
-      fs.writeFileSync(fileName, fileContent);
-
-      // Enviamos el archivo directamente a Telegram
-      await ctx.replyWithDocument({ source: fileName, filename: fileName }, { caption: "✅ EJECUCIÓN COMPLETADA: Archivo generado por NEXUS-V2000." });
-
-      // Borramos el archivo del servidor para no llenar la memoria
+    // LÓGICA DE ENTREGA DE ARCHIVOS
+    if (command.includes('PDF') || command.includes('INFORME') || command.includes('CONTRATO')) {
+      const fileName = `NEXUS_DOC_${Date.now()}.pdf`;
+      createPDF(content, fileName);
+      await ctx.replyWithDocument({ source: fileName }, { caption: "📄 DOCUMENTO EJECUTADO POR NEXUS-V2000." });
       fs.unlinkSync(fileName);
-    } else {
-      await ctx.reply(nexusReply, { parse_mode: 'Markdown' }).catch(() => ctx.reply(nexusReply));
+    } 
+    else if (command.includes('APP') || command.includes('ARCHIVO') || command.includes('CODIGO')) {
+      const fileName = `NEXUS_SISTEMA_${Date.now()}.html`;
+      const codeOnly = content.match(/```(?:html|javascript|css)?([\s\S]*?)```/);
+      fs.writeFileSync(fileName, codeOnly ? codeOnly[1] : content);
+      await ctx.replyWithDocument({ source: fileName }, { caption: "💻 SISTEMA GENERADO POR NEXUS-V2000." });
+      fs.unlinkSync(fileName);
+    } 
+    else {
+      // Envío de texto normal si no se pide archivo
+      await ctx.reply(content, { parse_mode: 'Markdown' }).catch(() => ctx.reply(content));
     }
 
   } catch (error) {
-    console.error("ERROR:", error);
-    await ctx.reply(`⚠️ ALERTA: ${error.message}`);
+    console.error(error);
+    await ctx.reply(`⚠️ ALERTA NEXUS: Error en el núcleo. Detalle: ${error.message}`);
   }
 });
 
-bot.launch().then(() => console.log("🚀 NEXUS-V2000: GENERADOR DE ARCHIVOS ACTIVO"));
+bot.launch().then(() => console.log("🚀 NEXUS-V2000 PRO ONLINE"));
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
